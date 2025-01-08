@@ -2,7 +2,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Define the new input data (Adams, Balas, and Zawack 10x10 instance, instance 5)
+# Datos de entrada (Adams, Balas, y Zawack 10x10 instancia 5)
 data = [
     [4, 88, 8, 68, 6, 94, 5, 99, 1, 67],
     [2, 89, 9, 77, 7, 99, 0, 86, 3, 92],
@@ -16,16 +16,21 @@ data = [
     [2, 67, 6, 95, 5, 68, 7, 67, 1, 86]
 ]
 
-num_jobs = len(data)
-num_machines = len(data[0])
+# Función para procesar los datos
+def parse_data(data):
+    jobs = []
+    for row in data:
+        job = [(row[i], row[i + 1]) for i in range(0, len(row), 2)]
+        jobs.append(job)
+    return jobs
 
-# Convert the input data to the format [(machine, time)] for each job
-jobs = []
-for row in data:
-    job = [(i, time) for i, time in enumerate(row)]
-    jobs.append(job)
+# Procesar los datos al formato [(máquina, tiempo)]
+jobs = parse_data(data)
 
-# Generate a valid initial solution
+num_jobs = len(jobs)
+num_tasks_per_job = len(jobs[0])
+
+# Generar una solución inicial válida
 def generate_initial_solution(jobs):
     solution = []
     for job_id, job in enumerate(jobs):
@@ -34,8 +39,9 @@ def generate_initial_solution(jobs):
     random.shuffle(solution)
     return solution
 
-# Decode a chromosome and calculate the makespan
+# Decodificar un cromosoma y calcular el makespan
 def calculate_makespan(chromosome, jobs):
+    num_machines = max(max(machine for machine, _ in job) for job in jobs) + 1
     machine_time = [0] * num_machines
     job_time = [0] * num_jobs
 
@@ -47,28 +53,26 @@ def calculate_makespan(chromosome, jobs):
 
     return max(machine_time)
 
-# Perform mutation (swap mutation)
+# Mutación por intercambio
 def swap_mutation(chromosome):
     a, b = random.sample(range(len(chromosome)), 2)
     chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
     return chromosome
 
-# Perform inversion mutation
+# Mutación por inversión
 def inversion_mutation(chromosome):
     a, b = sorted(random.sample(range(len(chromosome)), 2))
     chromosome[a:b] = reversed(chromosome[a:b])
     return chromosome
 
-# Perform crossover (Order Crossover - OX1)
+# Cruce (Order Crossover - OX1)
 def order_crossover(parent1, parent2):
     size = len(parent1)
     start, end = sorted(random.sample(range(size), 2))
     child = [None] * size
 
-    # Copy segment from parent1
     child[start:end] = parent1[start:end]
 
-    # Fill the remaining positions from parent2
     pointer = end
     for gene in parent2:
         if gene not in child:
@@ -79,15 +83,14 @@ def order_crossover(parent1, parent2):
 
     return child
 
-# Tournament selection
+# Selección por torneo
 def tournament_selection(population, fitnesses, k=3):
     selected = random.sample(list(zip(population, fitnesses)), k)
     selected.sort(key=lambda x: x[1])
     return selected[0][0]
 
-# Genetic Algorithm for JSSP
+# Algoritmo genético
 def genetic_algorithm(jobs, population_size=100, generations=150, mutation_rate=0.2, elitism=0.1):
-    # Initial population
     population = [generate_initial_solution(jobs) for _ in range(population_size)]
     best_solution = None
     best_makespan = float('inf')
@@ -97,7 +100,6 @@ def genetic_algorithm(jobs, population_size=100, generations=150, mutation_rate=
     for generation in range(generations):
         fitnesses = [calculate_makespan(ind, jobs) for ind in population]
 
-        # Record best solution
         current_best = min(fitnesses)
         if current_best < best_makespan:
             best_makespan = current_best
@@ -105,11 +107,9 @@ def genetic_algorithm(jobs, population_size=100, generations=150, mutation_rate=
 
         evolution.append(best_makespan)
 
-        # Elitism: Preserve the best individuals
         sorted_population = [x for _, x in sorted(zip(fitnesses, population))]
         new_population = sorted_population[:elite_count]
 
-        # Generate new population
         while len(new_population) < population_size:
             parent1 = tournament_selection(population, fitnesses)
             parent2 = tournament_selection(population, fitnesses)
@@ -126,7 +126,6 @@ def genetic_algorithm(jobs, population_size=100, generations=150, mutation_rate=
         population = new_population[:population_size]
         print(f"Generation {generation + 1}: Best Makespan = {best_makespan}")
 
-    # Plot evolution
     plt.plot(evolution, label='Best Makespan')
     plt.xlabel('Generation')
     plt.ylabel('Makespan')
@@ -136,7 +135,8 @@ def genetic_algorithm(jobs, population_size=100, generations=150, mutation_rate=
 
     return best_solution, best_makespan
 
-# Run the genetic algorithm
+# Ejecutar el algoritmo genético
 best_solution, best_makespan = genetic_algorithm(jobs)
-print("Best Solution:", best_solution)
+decoded_solution = [(jobs[job_id][task_id]) for job_id, task_id in best_solution]
+print("Best Solution (decoded):", decoded_solution)
 print("Best Makespan:", best_makespan)
