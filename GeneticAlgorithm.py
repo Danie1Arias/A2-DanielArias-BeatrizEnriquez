@@ -1,6 +1,4 @@
 import random
-import numpy as np
-import matplotlib.pyplot as plt
 
 class GeneticAlgorithm:
 # Datos de entrada (Adams, Balas, y Zawack 10x10 instancia 5)
