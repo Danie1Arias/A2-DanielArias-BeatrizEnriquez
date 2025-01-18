@@ -109,6 +109,12 @@ jobs = [
     [2, 67, 6, 95, 5, 68, 7, 67, 1, 86]
 ]
 
+jobs = [
+    [0, 3, 1, 2, 2, 2],
+    [0, 2, 2, 1, 1, 4],
+    [1, 4, 2, 3]
+]
+
 machines = 3  # Number of machines
 
 # Create the problem instance
