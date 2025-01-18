@@ -1,8 +1,7 @@
 import random
 
 class GeneticAlgorithm:
-    # Input data (Adams, Balas, and Zawack 10x10 instance 5)
-    def __init__(self, data, population_size=100, generations=150, mutation_rate=0.2, elitism=0.1):
+    def __init__(self, data, population_size=100, generations=150, mutation_rate=0.2, elitism=0.1, selection_scheme='tournament'):
         self.data = data
         self.jobs = self.parse_data(data)
         self.num_jobs = len(self.jobs)
@@ -11,8 +10,8 @@ class GeneticAlgorithm:
         self.generations = generations
         self.mutation_rate = mutation_rate
         self.elitism = elitism
+        self.selection_scheme = selection_scheme
 
-    # Function to process the input data
     def parse_data(self, data):
         jobs = []
         for row in data:
@@ -20,7 +19,6 @@ class GeneticAlgorithm:
             jobs.append(job)
         return jobs
 
-    # Generate a valid initial solution
     def generate_initial_solution(self, jobs):
         solution = []
         for job_id, job in enumerate(jobs):
@@ -29,7 +27,6 @@ class GeneticAlgorithm:
         random.shuffle(solution)
         return solution
 
-    # Decode a chromosome and calculate the makespan
     def calculate_makespan(self, chromosome, jobs):
         num_machines = max(max(machine for machine, _ in job) for job in jobs) + 1
         machine_time = [0] * num_machines
@@ -43,19 +40,16 @@ class GeneticAlgorithm:
 
         return max(machine_time)
 
-    # Swap mutation
     def swap_mutation(self, chromosome):
         a, b = random.sample(range(len(chromosome)), 2)
         chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
         return chromosome
 
-    # Inversion mutation
     def inversion_mutation(self, chromosome):
         a, b = sorted(random.sample(range(len(chromosome)), 2))
         chromosome[a:b] = reversed(chromosome[a:b])
         return chromosome
 
-    # Order Crossover (OX1)
     def order_crossover(self, parent1, parent2):
         size = len(parent1)
         start, end = sorted(random.sample(range(size), 2))
@@ -73,13 +67,59 @@ class GeneticAlgorithm:
 
         return child
 
-    # Tournament selection
     def tournament_selection(self, population, fitnesses, k=3):
         selected = random.sample(list(zip(population, fitnesses)), k)
         selected.sort(key=lambda x: x[1])
         return selected[0][0]
 
-    # Genetic Algorithm execution
+    def roulette_wheel_selection(self, population, fitnesses):
+        total_fitness = sum(1 / f for f in fitnesses)
+        pick = random.uniform(0, total_fitness)
+        current = 0
+        for individual, fitness in zip(population, fitnesses):
+            current += 1 / fitness
+            if current > pick:
+                return individual
+
+    def rank_selection(self, population, fitnesses):
+        ranked = sorted(zip(population, fitnesses), key=lambda x: x[1])
+        ranks = [i + 1 for i in range(len(ranked))]
+        total_rank = sum(ranks)
+        pick = random.uniform(0, total_rank)
+        current = 0
+        for i, (individual, _) in enumerate(ranked):
+            current += ranks[i]
+            if current > pick:
+                return individual
+
+    def stochastic_universal_sampling(self, population, fitnesses):
+        total_fitness = sum(1 / f for f in fitnesses)
+        distance = total_fitness / self.population_size
+        start = random.uniform(0, distance)
+        pointers = [start + i * distance for i in range(self.population_size)]
+        current = 0
+        selected = []
+
+        for pointer in pointers:
+            while current < len(fitnesses) and pointer > sum(1 / f for f in fitnesses[:current + 1]):
+                current += 1
+            selected.append(population[current])
+
+        return selected
+
+    def select(self, population, fitnesses):
+        if self.selection_scheme == 'tournament':
+            return self.tournament_selection(population, fitnesses)
+        elif self.selection_scheme == 'roulette':
+            return self.roulette_wheel_selection(population, fitnesses)
+        elif self.selection_scheme == 'rank':
+            return self.rank_selection(population, fitnesses)
+        elif self.selection_scheme == 'sus':
+            selected = self.stochastic_universal_sampling(population, fitnesses)
+            return random.choice(selected)
+        else:
+            raise ValueError("Invalid selection scheme")
+
     def run(self):
         population = [self.generate_initial_solution(self.jobs) for _ in range(self.population_size)]
         best_solution = None
@@ -101,8 +141,9 @@ class GeneticAlgorithm:
             new_population = sorted_population[:elite_count]
 
             while len(new_population) < self.population_size:
-                parent1 = self.tournament_selection(population, fitnesses)
-                parent2 = self.tournament_selection(population, fitnesses)
+                parent1 = self.select(population, fitnesses)
+                parent2 = self.select(population, fitnesses)
+
                 child1 = self.order_crossover(parent1, parent2)
                 child2 = self.order_crossover(parent2, parent1)
 
