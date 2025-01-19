@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 class GeneticAlgorithm:
-    def __init__(self, data, population_size=100, generations=150, mutation_rate=0.2, elitism=0.1, selection_scheme='tournament'):
+    def __init__(self, data, population_size=100, generations=150, mutation_rate=0.2, elitism=0.1, 
+                 selection_scheme='tournament', crossover_scheme='order'):
         self.data = data
         self.jobs = self.parse_data(data)
         self.num_jobs = len(self.jobs)
@@ -13,6 +14,7 @@ class GeneticAlgorithm:
         self.mutation_rate = mutation_rate
         self.elitism = elitism
         self.selection_scheme = selection_scheme
+        self.crossover_scheme = crossover_scheme
 
     def parse_data(self, data):
         jobs = []
@@ -76,6 +78,41 @@ class GeneticAlgorithm:
                 child[pointer] = gene
                 pointer += 1
         return child
+    
+    def one_point_crossover(self, parent1, parent2):
+        size = len(parent1)
+        point = random.randint(0, size)
+        child = parent1[:point] + parent2[point:]
+        return child
+    
+    def two_point_crossover(self, parent1, parent2):
+        size = len(parent1)
+        point1, point2 = sorted(random.sample(range(size), 2))
+        child = parent1[:point1] + parent2[point1:point2] + parent1[point2:]
+        return child
+    
+    def uniform_crossover(self, parent1, parent2):
+        size = len(parent1)
+        child = [None] * size
+        for i in range(size):
+            if random.random() < 0.5:
+                child[i] = parent1[i]
+            else:
+                child[i] = parent2[i]
+        return child
+    
+    def crossover(self, parent1, parent2):
+        if self.crossover_scheme == 'order':
+            return self.order_crossover(parent1, parent2)
+        elif self.crossover_scheme == 'one_point':
+            return self.one_point_crossover(parent1, parent2)
+        elif self.crossover_scheme == 'two_point':
+            return self.two_point_crossover(parent1, parent2)
+        elif self.crossover_scheme == 'uniform':
+            return self.uniform_crossover(parent1, parent2)
+        else:
+            raise ValueError("Invalid crossover scheme")
+
 
     def tournament_selection(self, population, fitnesses, k=3):
         selected = random.sample(list(zip(population, fitnesses)), k)
@@ -154,8 +191,8 @@ class GeneticAlgorithm:
             while len(new_population) < self.population_size:
                 parent1 = self.select(population, fitnesses)
                 parent2 = self.select(population, fitnesses)
-                child1 = self.order_crossover(parent1, parent2)
-                child2 = self.order_crossover(parent2, parent1)
+                child1 = self.crossover(parent1, parent2)
+                child2 = self.crossover(parent2, parent1)
                 if random.random() < self.mutation_rate:
                     child1 = self.swap_mutation(child1) if random.random() < 0.5 else self.inversion_mutation(child1)
                 if random.random() < self.mutation_rate:
@@ -163,7 +200,7 @@ class GeneticAlgorithm:
                 new_population.extend([child1, child2])
 
             population = new_population[:self.population_size]
-            print(f"Generation {generation + 1}: Best Makespan = {best_makespan}")
+            # print(f"Generation {generation + 1}: Best Makespan = {best_makespan}")
 
         makespan, best_schedule = self.calculate_makespan(best_solution, self.jobs)
         return best_solution, best_makespan, evolution, best_schedule
