@@ -4,7 +4,7 @@ import matplotlib.patches as mpatches
 
 class GeneticAlgorithm:
     def __init__(self, data, population_size=100, generations=150, mutation_rate=0.2, elitism=0.1, 
-                 selection_scheme='tournament', crossover_scheme='order'):
+                 selection_scheme='tournament', crossover_scheme='order', mutation_scheme='one_mutation'):
         self.data = data
         self.jobs = self.parse_data(data)
         self.num_jobs = len(self.jobs)
@@ -15,6 +15,7 @@ class GeneticAlgorithm:
         self.elitism = elitism
         self.selection_scheme = selection_scheme
         self.crossover_scheme = crossover_scheme
+        self.mutation_scheme = mutation_scheme
 
     def parse_data(self, data):
         jobs = []
@@ -165,6 +166,26 @@ class GeneticAlgorithm:
             return self.stochastic_universal_sampling(population, fitnesses)
         else:
             raise ValueError("Invalid selection scheme")
+        
+    def mutate(self, chromosome):
+        if self.mutation_scheme == 'one_mutation':
+            if random.random() < 0.5:
+                return self.swap_mutation(chromosome)
+            else:
+                return self.inversion_mutation(chromosome)
+        
+        elif self.mutation_scheme == 'multi_mutation':
+            num_mutations = random.randint(1, 3)
+            for _ in range(num_mutations):
+                if random.random() < 0.5:
+                    chromosome = self.swap_mutation(chromosome)
+                else:
+                    chromosome = self.inversion_mutation(chromosome)
+            return chromosome
+        
+        else:
+            raise ValueError("Invalid mutation scheme")
+
 
     def run(self):
         population = [self.generate_initial_solution(self.jobs) for _ in range(self.population_size)]
@@ -191,12 +212,13 @@ class GeneticAlgorithm:
             while len(new_population) < self.population_size:
                 parent1 = self.select(population, fitnesses)
                 parent2 = self.select(population, fitnesses)
+                
                 child1 = self.crossover(parent1, parent2)
                 child2 = self.crossover(parent2, parent1)
-                if random.random() < self.mutation_rate:
-                    child1 = self.swap_mutation(child1) if random.random() < 0.5 else self.inversion_mutation(child1)
-                if random.random() < self.mutation_rate:
-                    child2 = self.swap_mutation(child2) if random.random() < 0.5 else self.inversion_mutation(child2)
+                
+                child1 = self.mutate(child1) if random.random() < self.mutation_rate else child1
+                child2 = self.mutate(child2) if random.random() < self.mutation_rate else child2
+
                 new_population.extend([child1, child2])
 
             population = new_population[:self.population_size]
