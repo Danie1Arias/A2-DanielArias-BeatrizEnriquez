@@ -82,9 +82,50 @@ class GeneticAlgorithm:
         selected.sort(key=lambda x: x[1])
         return selected[0][0]
 
+    def roulette_wheel_selection(self, population, fitnesses):
+        total_fitness = sum(1 / f for f in fitnesses)
+        pick = random.uniform(0, total_fitness)
+        current = 0
+        for individual, fitness in zip(population, fitnesses):
+            current += 1 / fitness
+            if current >= pick:
+                return individual
+
+    def rank_selection(self, population, fitnesses):
+        sorted_population = [x for _, x in sorted(zip(fitnesses, population))]
+        ranks = range(1, len(sorted_population) + 1)
+        total_rank = sum(ranks)
+        pick = random.uniform(0, total_rank)
+        current = 0
+        for rank, individual in zip(ranks, sorted_population):
+            current += rank
+            if current >= pick:
+                return individual
+
+    def stochastic_universal_sampling(self, population, fitnesses):
+        total_fitness = sum(1 / f for f in fitnesses)
+        distance = total_fitness / len(population)
+        start = random.uniform(0, distance)
+        points = [start + i * distance for i in range(len(population))]
+        individuals = []
+        for point in points:
+            current = 0
+            for individual, fitness in zip(population, fitnesses):
+                current += 1 / fitness
+                if current >= point:
+                    individuals.append(individual)
+                    break
+        return random.choice(individuals)
+
     def select(self, population, fitnesses):
         if self.selection_scheme == 'tournament':
             return self.tournament_selection(population, fitnesses)
+        elif self.selection_scheme == 'roulette':
+            return self.roulette_wheel_selection(population, fitnesses)
+        elif self.selection_scheme == 'rank':
+            return self.rank_selection(population, fitnesses)
+        elif self.selection_scheme == 'sus':
+            return self.stochastic_universal_sampling(population, fitnesses)
         else:
             raise ValueError("Invalid selection scheme")
 
@@ -122,7 +163,7 @@ class GeneticAlgorithm:
                 new_population.extend([child1, child2])
 
             population = new_population[:self.population_size]
-            # print(f"Generation {generation + 1}: Best Makespan = {best_makespan}")
+            print(f"Generation {generation + 1}: Best Makespan = {best_makespan}")
 
         makespan, best_schedule = self.calculate_makespan(best_solution, self.jobs)
         return best_solution, best_makespan, evolution, best_schedule
