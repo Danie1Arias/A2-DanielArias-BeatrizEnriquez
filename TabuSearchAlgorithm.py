@@ -42,7 +42,7 @@ def get_neighbors(solution):
     return neighbors
 
 
-def tabu_search(problem, max_iter=1000, tabu_size=100):
+def tabu_search(problem, max_iter=1000, tabu_size=50):
     current_solution = generate_initial_solution(problem)
     best_solution = current_solution
     best_makespan = problem.makespan(best_solution)
@@ -103,4 +103,4 @@ problem = JobShop(data1, num_machines)
 
 best_solution, best_makespan = tabu_search(problem)
 print("Mejor solución encontrada:", best_solution)
-print("Makespan:", best_makespan)
+print("Makespan:", best_makespan)   
