@@ -1,5 +1,6 @@
 import random
 
+
 class GeneticAlgorithm:
     def __init__(self, data, population_size=100, generations=150, mutation_rate=0.2, elitism=0.1, selection_scheme='tournament'):
         self.data = data
@@ -28,17 +29,40 @@ class GeneticAlgorithm:
         return solution
 
     def calculate_makespan(self, chromosome, jobs):
+        # Initialize variables
         num_machines = max(max(machine for machine, _ in job) for job in jobs) + 1
-        machine_time = [0] * num_machines
-        job_time = [0] * self.num_jobs
+        machine_time = [0] * num_machines  # Tracks when each machine becomes available
+        job_completion_time = [0] * len(jobs)  # Tracks when the last task of each job is completed
+        task_schedule = []  # Stores the task scheduling details
 
+        # Loop through the chromosome to schedule tasks
         for job_id, task_id in chromosome:
             machine, duration = jobs[job_id][task_id]
-            start_time = max(machine_time[machine], job_time[job_id])
-            machine_time[machine] = start_time + duration
-            job_time[job_id] = start_time + duration
 
-        return max(machine_time)
+            # Ensure the task starts only after the previous task in the same job is completed
+            earliest_start_time = job_completion_time[job_id]
+
+            # Ensure the machine is available before the task starts
+            start_time = max(machine_time[machine], earliest_start_time)
+            end_time = start_time + duration
+
+            # Update machine and job completion times
+            machine_time[machine] = end_time
+            job_completion_time[job_id] = end_time
+
+            # Add the task to the schedule
+            task_schedule.append({
+                'machine': machine,
+                'start': start_time,
+                'end': end_time,
+                'name': f'job({job_id}, {task_id})'
+            })
+
+        # Makespan is the maximum time when all machines finish their tasks
+        makespan = max(machine_time)
+        return makespan, task_schedule
+
+
 
     def swap_mutation(self, chromosome):
         a, b = random.sample(range(len(chromosome)), 2)
@@ -72,51 +96,9 @@ class GeneticAlgorithm:
         selected.sort(key=lambda x: x[1])
         return selected[0][0]
 
-    def roulette_wheel_selection(self, population, fitnesses):
-        total_fitness = sum(1 / f for f in fitnesses)
-        pick = random.uniform(0, total_fitness)
-        current = 0
-        for individual, fitness in zip(population, fitnesses):
-            current += 1 / fitness
-            if current > pick:
-                return individual
-
-    def rank_selection(self, population, fitnesses):
-        ranked = sorted(zip(population, fitnesses), key=lambda x: x[1])
-        ranks = [i + 1 for i in range(len(ranked))]
-        total_rank = sum(ranks)
-        pick = random.uniform(0, total_rank)
-        current = 0
-        for i, (individual, _) in enumerate(ranked):
-            current += ranks[i]
-            if current > pick:
-                return individual
-
-    def stochastic_universal_sampling(self, population, fitnesses):
-        total_fitness = sum(1 / f for f in fitnesses)
-        distance = total_fitness / self.population_size
-        start = random.uniform(0, distance)
-        pointers = [start + i * distance for i in range(self.population_size)]
-        current = 0
-        selected = []
-
-        for pointer in pointers:
-            while current < len(fitnesses) and pointer > sum(1 / f for f in fitnesses[:current + 1]):
-                current += 1
-            selected.append(population[current])
-
-        return selected
-
     def select(self, population, fitnesses):
         if self.selection_scheme == 'tournament':
             return self.tournament_selection(population, fitnesses)
-        elif self.selection_scheme == 'roulette':
-            return self.roulette_wheel_selection(population, fitnesses)
-        elif self.selection_scheme == 'rank':
-            return self.rank_selection(population, fitnesses)
-        elif self.selection_scheme == 'sus':
-            selected = self.stochastic_universal_sampling(population, fitnesses)
-            return random.choice(selected)
         else:
             raise ValueError("Invalid selection scheme")
 
@@ -128,7 +110,9 @@ class GeneticAlgorithm:
         elite_count = int(self.elitism * self.population_size)
 
         for generation in range(self.generations):
-            fitnesses = [self.calculate_makespan(ind, self.jobs) for ind in population]
+            fitnesses_and_schedules = [self.calculate_makespan(ind, self.jobs) for ind in population]
+            fitnesses = [fs[0] for fs in fitnesses_and_schedules]
+            schedules = [fs[1] for fs in fitnesses_and_schedules]
 
             current_best = min(fitnesses)
             if current_best < best_makespan:
@@ -157,5 +141,5 @@ class GeneticAlgorithm:
             population = new_population[:self.population_size]
             print(f"Generation {generation + 1}: Best Makespan = {best_makespan}")
 
-        decoded_solution = [(self.jobs[job_id][task_id]) for job_id, task_id in best_solution]
-        return best_solution, best_makespan, evolution, decoded_solution
+        makespan, best_schedule = self.calculate_makespan(best_solution, self.jobs)
+        return best_solution, best_makespan, evolution, best_schedule
