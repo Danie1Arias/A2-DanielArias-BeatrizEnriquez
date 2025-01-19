@@ -17,6 +17,7 @@ class GeneticAlgorithm:
         self.crossover_scheme = crossover_scheme
         self.mutation_scheme = mutation_scheme
 
+    # Parse the data into a list of jobs
     def parse_data(self, data):
         jobs = []
         for row in data:
@@ -24,6 +25,7 @@ class GeneticAlgorithm:
             jobs.append(job)
         return jobs
 
+    # Generate an initial solution by randomly shuffling the tasks
     def generate_initial_solution(self, jobs):
         solution = []
         for job_id, job in enumerate(jobs):
@@ -32,6 +34,7 @@ class GeneticAlgorithm:
         random.shuffle(solution)
         return solution
 
+    # Calculate the makespan of a chromosome and the schedule of tasks
     def calculate_makespan(self, chromosome, jobs):
         num_machines = max(max(machine for machine, _ in job) for job in jobs) + 1
         machine_time = [0] * num_machines
@@ -56,16 +59,7 @@ class GeneticAlgorithm:
         makespan = max(machine_time)
         return makespan, task_schedule
 
-    def swap_mutation(self, chromosome):
-        a, b = random.sample(range(len(chromosome)), 2)
-        chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
-        return chromosome
-
-    def inversion_mutation(self, chromosome):
-        a, b = sorted(random.sample(range(len(chromosome)), 2))
-        chromosome[a:b] = reversed(chromosome[a:b])
-        return chromosome
-
+    # Crossover functions
     def order_crossover(self, parent1, parent2):
         size = len(parent1)
         start, end = sorted(random.sample(range(size), 2))
@@ -114,7 +108,7 @@ class GeneticAlgorithm:
         else:
             raise ValueError("Invalid crossover scheme")
 
-
+    # Selection functions
     def tournament_selection(self, population, fitnesses, k=3):
         selected = random.sample(list(zip(population, fitnesses)), k)
         selected.sort(key=lambda x: x[1])
@@ -166,6 +160,17 @@ class GeneticAlgorithm:
             return self.stochastic_universal_sampling(population, fitnesses)
         else:
             raise ValueError("Invalid selection scheme")
+
+    # Mutation functions       
+    def swap_mutation(self, chromosome):
+        a, b = random.sample(range(len(chromosome)), 2)
+        chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
+        return chromosome
+
+    def inversion_mutation(self, chromosome):
+        a, b = sorted(random.sample(range(len(chromosome)), 2))
+        chromosome[a:b] = reversed(chromosome[a:b])
+        return chromosome
         
     def mutate(self, chromosome):
         if self.mutation_scheme == 'one_mutation':
@@ -186,7 +191,7 @@ class GeneticAlgorithm:
         else:
             raise ValueError("Invalid mutation scheme")
 
-
+    # Main function to run the genetic algorithm
     def run(self):
         population = [self.generate_initial_solution(self.jobs) for _ in range(self.population_size)]
         best_solution = None
@@ -227,6 +232,7 @@ class GeneticAlgorithm:
         makespan, best_schedule = self.calculate_makespan(best_solution, self.jobs)
         return best_solution, best_makespan, evolution, best_schedule
 
+    # Plot the evolution of the best makespan and the final schedule
     def plot_results(self, evolution, schedule):
         fig, axs = plt.subplots(1, 2, figsize=(18, 8))
         axs[0].plot(evolution, color='blue')
