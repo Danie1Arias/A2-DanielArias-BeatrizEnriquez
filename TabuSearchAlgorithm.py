@@ -1,106 +1,162 @@
 import random
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
-class JobShop:
-    def __init__(self, jobs, machines= 3):
-        self.jobs = jobs
-        # Determinar el número de máquinas si no se proporciona explícitamente
-        self.machines = machines if machines is not None else len(jobs[0])
-        self.num_jobs = len(jobs)
-        print("NUM_MACHINES:", self.machines)
-        print("NUM_JOBS:", len(jobs))
+class TabuSearch:
+    def __init__(self, data, max_iterations=1000, tabu_tenure=10, aspiration_criteria=True):
+        self.data = data
+        self.jobs = self.parse_data(data)
+        self.num_jobs = len(self.jobs)
+        self.num_tasks_per_job = len(self.jobs[0])
+        self.max_iterations = max_iterations
+        self.tabu_tenure = tabu_tenure
+        self.tabu_list = {}
+        self.best_solution = None
+        self.best_makespan = float('inf')
+        self.aspiration_criteria = aspiration_criteria
 
-    def makespan(self, schedule):
-        machine_times = [0] * self.machines
-        job_times = [0] * self.num_jobs
+    # Parse the data into a list of jobs
+    def parse_data(self, data):
+        jobs = []
+        for row in data:
+            job = [(row[i], row[i + 1]) for i in range(0, len(row), 2)]
+            jobs.append(job)
+        return jobs
 
-        for job, machine in schedule:
-            processing_time = self.jobs[job][machine]
-            start_time = max(machine_times[machine], job_times[job])
-            end_time = start_time + processing_time
-            machine_times[machine] = end_time
-            job_times[job] = end_time
+    # Generate an initial random solution (random order of tasks across all jobs)
+    def generate_initial_solution(self):
+        solution = []
+        for job_id, job in enumerate(self.jobs):
+            for task_id in range(len(job)):
+                solution.append((job_id, task_id))
+        random.shuffle(solution)
+        return solution
 
-        return max(machine_times)
+    # Calculate makespan of a given solution
+    def calculate_makespan(self, solution):
+        num_machines = max(max(machine for machine, _ in job) for job in self.jobs) + 1
+        machine_time = [0] * num_machines
+        job_completion_time = [0] * len(self.jobs)
+        task_schedule = []
 
+        for job_id, task_id in solution:
+            machine, duration = self.jobs[job_id][task_id]
+            earliest_start_time = job_completion_time[job_id]
+            start_time = max(machine_time[machine], earliest_start_time)
+            end_time = start_time + duration
+            machine_time[machine] = end_time
+            job_completion_time[job_id] = end_time
 
-def generate_initial_solution(problem):
-    schedule = []
-    for job_id in range(problem.num_jobs):
-        for machine_id in range(problem.machines):
-            schedule.append((job_id, machine_id))
-    return schedule
+            task_schedule.append({
+                'machine': machine,
+                'start': start_time,
+                'end': end_time,
+                'name': f'job({job_id}, {task_id})'
+            })
 
+        makespan = max(machine_time)
+        return makespan, task_schedule
 
-def get_neighbors(solution):
-    neighbors = []
-    for i in range(len(solution)):
-        for j in range(i + 1, len(solution)):
-            if solution[i][0] == solution[j][0]:  # Solo intercambiar si son del mismo trabajo
-                neighbor = solution[:]
-                neighbor[i], neighbor[j] = neighbor[j], neighbor[i]
-                neighbors.append(neighbor)
-    return neighbors
+    # Perform a swap operation on the solution (neighbouring move)
+    def swap_move(self, solution):
+        # Convert tuple to list to make it mutable
+        new_solution = list(solution)
+        a, b = random.sample(range(len(solution)), 2)
+        new_solution[a], new_solution[b] = new_solution[b], new_solution[a]
+        
+        # Convert list back to tuple for immutability and hashing
+        new_solution_tuple = tuple(new_solution)
+        return new_solution_tuple
 
+    # Check if a move is in the tabu list
+    def is_tabu(self, move):
+        # Convert list of tuples (move) to tuple of tuples to make it hashable
+        move_tuple = tuple(move)
+        return move_tuple in self.tabu_list and self.tabu_list[move_tuple] > 0
 
-def tabu_search(problem, max_iter=1000, tabu_size=50):
-    current_solution = generate_initial_solution(problem)
-    best_solution = current_solution
-    best_makespan = problem.makespan(best_solution)
+    # Update the tabu list by decrementing the tenure of each entry
+    def update_tabu_list(self):
+        for move in list(self.tabu_list.keys()):
+            if self.tabu_list[move] > 0:
+                self.tabu_list[move] -= 1
+            else:
+                del self.tabu_list[move]
 
-    tabu_list = []
-    iterations = 0
+    # Main function to run the Tabu Search algorithm
+    def run(self):
+        current_solution = self.generate_initial_solution()
+        current_makespan, _ = self.calculate_makespan(current_solution)
+        best_solution = current_solution
+        best_makespan = current_makespan
+        iteration = 0
+        evolution = []
 
-    while iterations < max_iter:
-        neighbors = get_neighbors(current_solution)
-        best_neighbor = None
-        best_neighbor_makespan = float('inf')
+        while iteration < self.max_iterations:
+            neighbours = [self.swap_move(current_solution) for _ in range(10)]
+            best_neighbour = None
+            best_neighbour_makespan = float('inf')
 
-        for neighbor in neighbors:
-            if neighbor not in tabu_list:
-                neighbor_makespan = problem.makespan(neighbor)
-                if neighbor_makespan < best_neighbor_makespan:
-                    best_neighbor = neighbor
-                    best_neighbor_makespan = neighbor_makespan
+            # Evaluate the neighbours
+            for neighbour in neighbours:
+                neighbour_makespan, _ = self.calculate_makespan(neighbour)
 
-        current_solution = best_neighbor
-        current_makespan = best_neighbor_makespan
+                # Aspiration criteria: if the neighbour is better, or it satisfies the aspiration
+                if neighbour_makespan < best_neighbour_makespan or (self.aspiration_criteria and not self.is_tabu(neighbour)):
+                    best_neighbour = neighbour
+                    best_neighbour_makespan = neighbour_makespan
 
-        if current_makespan < best_makespan:
-            best_solution = current_solution
-            best_makespan = current_makespan
+            # If the best neighbour is better than the current solution, accept it
+            if best_neighbour_makespan < current_makespan:
+                current_solution = best_neighbour
+                current_makespan = best_neighbour_makespan
+                # Add the move to the tabu list (convert to tuple)
+                self.tabu_list[tuple(current_solution)] = self.tabu_tenure
 
-        tabu_list.append(current_solution)
-        if len(tabu_list) > tabu_size:
-            tabu_list.pop(0)
+            self.update_tabu_list()  # Update the tabu list for each iteration
 
-        iterations += 1
+            # Update best solution
+            if current_makespan < best_makespan:
+                best_solution = current_solution
+                best_makespan = current_makespan
 
-    return best_solution, best_makespan
+            evolution.append(best_makespan)
+            iteration += 1
 
+        best_makespan, best_schedule = self.calculate_makespan(best_solution)
+        return best_solution, best_makespan, evolution, best_schedule
 
-data1  = [
-    [0, 3, 1, 2, 2, 2],
-    [0, 2, 2, 1, 1, 4],
-    [1, 4, 2, 3]
-]
-data2 = [
-    [4, 88, 8, 68, 6, 94, 5, 99, 1, 67],
-    [2, 89, 9, 77, 7, 99, 0, 86, 3, 92],
-    [5, 72, 3, 50, 6, 69, 4, 75, 2, 94],
-    [8, 66, 0, 92, 1, 82, 7, 94, 9, 63],
-    [9, 83, 8, 61, 0, 83, 1, 65, 6, 64],
-    [5, 85, 7, 78, 4, 85, 2, 55, 3, 77],
-    [7, 94, 2, 68, 1, 61, 4, 99, 3, 54],
-    [6, 75, 5, 66, 0, 76, 9, 63, 8, 67],
-    [3, 69, 4, 88, 9, 82, 8, 95, 0, 99],
-    [2, 67, 6, 95, 5, 68, 7, 67, 1, 86]
-]
+    # Plot the results (Evolution of Makespan and Gantt Chart)
+    def plot_results(self, evolution, schedule):
+        fig, axs = plt.subplots(1, 2, figsize=(18, 8))
+        axs[0].plot(evolution, color='blue')
+        axs[0].set_title('Evolution of Makespan', fontsize=14)
+        axs[0].set_xlabel('Iteration', fontsize=12)
+        axs[0].set_ylabel('Makespan', fontsize=12)
+        axs[0].grid(True, linestyle='--', alpha=0.7)
 
+        task_colors = plt.cm.tab20.colors
+        for task in schedule:
+            machine = task['machine']
+            start = task['start']
+            end = task['end']
+            name = task['name']
+            job_id = int(name.split('(')[1].split(',')[0])
+            color = task_colors[job_id % len(task_colors)]
 
-num_machines = 3  # Number of machines
+            axs[1].broken_barh([(start, end - start)], (machine - 0.4, 0.8), facecolors=color, edgecolor='black', alpha=0.8)
+            axs[1].text(x=start + (end - start) / 2, y=machine, s=name, va='center', ha='center', color='white', fontsize=8, weight='bold', clip_on=True)
 
-problem = JobShop(data1, num_machines)
+        machines = sorted(set(task['machine'] for task in schedule))
+        axs[1].set_yticks(machines)
+        axs[1].set_yticklabels([f'Machine {i}' for i in machines], fontsize=10)
+        axs[1].set_title('Gantt Chart', fontsize=14)
+        axs[1].set_xlabel('Time', fontsize=12)
+        axs[1].set_ylabel('Machines', fontsize=12)
+        axs[1].grid(True, axis='x', linestyle='--', alpha=0.7)
 
-best_solution, best_makespan = tabu_search(problem)
-print("Mejor solución encontrada:", best_solution)
-print("Makespan:", best_makespan)   
+        job_ids = sorted(set(int(task['name'].split('(')[1].split(',')[0]) for task in schedule))
+        patches = [mpatches.Patch(color=task_colors[job_id % len(task_colors)], label=f'Job {job_id}') for job_id in job_ids]
+        axs[1].legend(handles=patches, loc='upper right', bbox_to_anchor=(1.15, 1), fontsize=10)
+
+        plt.tight_layout()
+        plt.show()
