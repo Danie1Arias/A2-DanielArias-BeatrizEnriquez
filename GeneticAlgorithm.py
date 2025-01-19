@@ -215,12 +215,15 @@ class GeneticAlgorithm:
             new_population = sorted_population[:elite_count]
 
             while len(new_population) < self.population_size:
+                # Selection
                 parent1 = self.select(population, fitnesses)
                 parent2 = self.select(population, fitnesses)
                 
+                # Crossover
                 child1 = self.crossover(parent1, parent2)
                 child2 = self.crossover(parent2, parent1)
                 
+                # Mutation
                 child1 = self.mutate(child1) if random.random() < self.mutation_rate else child1
                 child2 = self.mutate(child2) if random.random() < self.mutation_rate else child2
 
@@ -256,7 +259,7 @@ class GeneticAlgorithm:
         machines = sorted(set(task['machine'] for task in schedule))
         axs[1].set_yticks(machines)
         axs[1].set_yticklabels([f'Machine {i}' for i in machines], fontsize=10)
-        axs[1].set_title('Gantt Chart for the Final Solution', fontsize=14)
+        axs[1].set_title('Gantt Chart', fontsize=14)
         axs[1].set_xlabel('Time', fontsize=12)
         axs[1].set_ylabel('Machines', fontsize=12)
         axs[1].grid(True, axis='x', linestyle='--', alpha=0.7)
