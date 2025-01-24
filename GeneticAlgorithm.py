@@ -119,13 +119,13 @@ class GeneticAlgorithm:
 
     def select(self, population, fitnesses):
         if self.selection_scheme == 'tournament':
-            return self.tournament_selection(population, fitnesses)
+            return self.tournament_selection(population, fitnesses), self.tournament_selection(population, fitnesses)
         elif self.selection_scheme == 'roulette':
-            return self.roulette_wheel_selection(population, fitnesses)
+            return self.roulette_wheel_selection(population, fitnesses), self.roulette_wheel_selection(population, fitnesses)
         elif self.selection_scheme == 'rank':
-            return self.rank_selection(population, fitnesses)
+            return self.rank_selection(population, fitnesses), self.rank_selection(population, fitnesses)
         elif self.selection_scheme == 'sus':
-            return self.stochastic_universal_sampling(population, fitnesses)
+            return self.stochastic_universal_sampling(population, fitnesses), self.stochastic_universal_sampling(population, fitnesses)
         else:
             raise ValueError("Invalid selection scheme")
       
@@ -185,13 +185,8 @@ class GeneticAlgorithm:
             new_population = sorted_population[:elite_count]
 
             while len(new_population) < self.population_size:
-                # Selection
-                parent1 = self.select(population, fitnesses)
-                parent2 = self.select(population, fitnesses)
-                
+                parent1, parent2 = self.select(population, fitnesses)
                 child1, child2 = self.crossover(parent1, parent2)
-
-                # Mutation
                 child1, child2 = self.mutate(child1, child2)
 
                 new_population.extend([child1, child2])
