@@ -128,33 +128,26 @@ class GeneticAlgorithm:
             return self.stochastic_universal_sampling(population, fitnesses)
         else:
             raise ValueError("Invalid selection scheme")
-
-    # Mutation functions       
-    def swap_mutation(self, chromosome):
-        a, b = random.sample(range(len(chromosome)), 2)
-        chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
-        return chromosome
-
-    def inversion_mutation(self, chromosome):
-        a, b = sorted(random.sample(range(len(chromosome)), 2))
-        chromosome[a:b] = reversed(chromosome[a:b])
-        return chromosome
-        
-    def mutate(self, chromosome):
+      
+    def mutate(self, child1, child2):
         if self.mutation_scheme == 'one_mutation':
-            if random.random() < 0.5:
-                return self.swap_mutation(chromosome)
-            else:
-                return self.inversion_mutation(chromosome)
+            point = random.randint(0, len(child1) - 1)
+            gen1 = child1[point]
+            gen2 = child2[point]
+
+            child1[point] = gen2
+            child2[point] = gen1
+            
+            for i in range(len(child2)):
+                if child1[i] == gen2 and i != point:
+                    child1[i] = gen1
+                if child2[i] == gen1 and i != point:
+                    child2[i] = gen2
+
+            return order_chromosome(child1), order_chromosome(child2)
         
-        elif self.mutation_scheme == 'multi_mutation':
-            num_mutations = random.randint(1, 3)
-            for _ in range(num_mutations):
-                if random.random() < 0.5:
-                    chromosome = self.swap_mutation(chromosome)
-                else:
-                    chromosome = self.inversion_mutation(chromosome)
-            return chromosome
+        #elif self.mutation_scheme == 'multi_mutation':
+            
         
         else:
             raise ValueError("Invalid mutation scheme")
@@ -170,7 +163,6 @@ class GeneticAlgorithm:
         for generation in range(self.generations):
             fitnesses_and_schedules = [calculate_makespan(ind, self.jobs) for ind in population]
             fitnesses = [fs[0] for fs in fitnesses_and_schedules]
-            schedules = [fs[1] for fs in fitnesses_and_schedules]
 
             current_best = min(fitnesses)
             if current_best < best_makespan:
@@ -187,14 +179,10 @@ class GeneticAlgorithm:
                 parent1 = self.select(population, fitnesses)
                 parent2 = self.select(population, fitnesses)
                 
-                # Crossover
-                children = self.crossover(parent1, parent2)
-                child1 = children[0]
-                child2 = children[1]
+                child1, child2 = self.crossover(parent1, parent2)
 
                 # Mutation
-                # child1 = self.mutate(child1) if random.random() < self.mutation_rate else child1
-                # child2 = self.mutate(child2) if random.random() < self.mutation_rate else child2
+                child1, child2 = self.mutate(child1, child2)
 
                 new_population.extend([child1, child2])
 

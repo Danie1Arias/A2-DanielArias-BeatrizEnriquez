@@ -7,7 +7,7 @@ data = [
     [1, 4, 2, 3]
 ]
 
-ga = GeneticAlgorithm(data, population_size=3, generations=50, mutation_rate=0.3, elitism=0.1, 
+ga = GeneticAlgorithm(data, population_size=10, generations=50, mutation_rate=0.3, elitism=0.1, 
                       selection_scheme='tournament', crossover_scheme='one_point', mutation_scheme='one_mutation')
 best_solution, best_makespan, evolution, schedule = ga.run()
 
