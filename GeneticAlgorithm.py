@@ -131,26 +131,36 @@ class GeneticAlgorithm:
       
     def mutate(self, child1, child2):
         if self.mutation_scheme == 'one_mutation':
-            point = random.randint(0, len(child1) - 1)
-            gen1 = child1[point]
-            gen2 = child2[point]
-
-            child1[point] = gen2
-            child2[point] = gen1
-            
-            for i in range(len(child2)):
-                if child1[i] == gen2 and i != point:
-                    child1[i] = gen1
-                if child2[i] == gen1 and i != point:
-                    child2[i] = gen2
-
-            return order_chromosome(child1), order_chromosome(child2)
+            return self.single_mutation(child1, child2)
         
-        #elif self.mutation_scheme == 'multi_mutation':
+        elif self.mutation_scheme == 'multi_mutation':
+            offspring1 = child1
+            offspring2 = child2
+
+            for i in range(len(child1)):
+                if random.random() < self.mutation_rate:
+                    offspring1, offspring2 = self.single_mutation(offspring1, offspring2)
             
-        
+            return offspring1, offspring2
         else:
             raise ValueError("Invalid mutation scheme")
+        
+    def single_mutation(self, child1, child2):
+        point = random.randint(0, len(child1) - 1)
+        gen1 = child1[point]
+        gen2 = child2[point]
+
+        child1[point] = gen2
+        child2[point] = gen1
+        
+        for i in range(len(child2)):
+            if child1[i] == gen2 and i != point:
+                child1[i] = gen1
+            if child2[i] == gen1 and i != point:
+                child2[i] = gen2
+        
+        return order_chromosome(child1), order_chromosome(child2)
+    
 
     # Main function to run the genetic algorithm
     def run(self):
