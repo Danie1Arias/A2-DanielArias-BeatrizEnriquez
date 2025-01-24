@@ -1,5 +1,5 @@
 import random
-from Utils import parse_data, generate_initial_solution, calculate_makespan
+from Utils import parse_data, generate_initial_solution, calculate_makespan, order_chromosome
 
 class GeneticAlgorithm:
     def __init__(self, data, population_size=100, generations=150, mutation_rate=0.2, elitism=0.1, 
@@ -33,9 +33,20 @@ class GeneticAlgorithm:
     
     def one_point_crossover(self, parent1, parent2):
         size = len(parent1)
-        point = random.randint(0, size)
-        child = parent1[:point] + parent2[point:]
-        return child
+        point = random.randint(1, size - 1)
+
+        # Exchange the tails of the parents
+        child1 = parent1[:point] + parent2[point:]
+        child2 = parent2[:point] + parent1[point:]
+
+        # Exchange duplicated genes in child1 and child2
+        for i in range(point, size):
+            if child1[i] in child1[:i]:
+                child1[i] = next(gene for gene in parent2 if gene not in child1)
+            if child2[i] in child2[:i]:
+                child2[i] = next(gene for gene in parent1 if gene not in child2)
+        
+        return order_chromosome(child1), order_chromosome(child2)
     
     def two_point_crossover(self, parent1, parent2):
         size = len(parent1)
@@ -177,17 +188,17 @@ class GeneticAlgorithm:
                 parent2 = self.select(population, fitnesses)
                 
                 # Crossover
-                child1 = self.crossover(parent1, parent2)
-                child2 = self.crossover(parent2, parent1)
-                
+                children = self.crossover(parent1, parent2)
+                child1 = children[0]
+                child2 = children[1]
+
                 # Mutation
-                child1 = self.mutate(child1) if random.random() < self.mutation_rate else child1
-                child2 = self.mutate(child2) if random.random() < self.mutation_rate else child2
+                # child1 = self.mutate(child1) if random.random() < self.mutation_rate else child1
+                # child2 = self.mutate(child2) if random.random() < self.mutation_rate else child2
 
                 new_population.extend([child1, child2])
 
             population = new_population[:self.population_size]
             # print(f"Generation {generation + 1}: Best Makespan = {best_makespan}")
-
         makespan, best_schedule = calculate_makespan(best_solution, self.jobs)
         return best_solution, best_makespan, evolution, best_schedule

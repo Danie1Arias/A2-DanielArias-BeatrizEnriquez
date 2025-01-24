@@ -12,24 +12,27 @@ def parse_data(data):
 
 # Generate an initial solution by randomly shuffling the tasks
 def generate_initial_solution(jobs):
-    solution = []
-    for job_id, job in enumerate(jobs):
-        for task_id in range(len(job)):
-            solution.append((job_id, task_id))
-    random.shuffle(solution)
-    return solution
+    chromosome = []
+    for job_id, tasks in enumerate(jobs):
+        for task_id, (machine, processing_time) in enumerate(tasks):
+
+            chromosome.append((job_id, task_id, machine, processing_time))
+            random.shuffle(chromosome)
+
+    return order_chromosome(chromosome)
 
 # Calculate the makespan of a chromosome and the schedule of tasks
 def calculate_makespan(chromosome, jobs):
     num_machines = max(max(machine for machine, _ in job) for job in jobs) + 1
-    machine_time = [0] * num_machines
     job_completion_time = [0] * len(jobs)
     task_schedule = []
+    machine_time = [0] * num_machines
 
-    for job_id, task_id in chromosome:
+    for job_id, task_id, machine, duration in chromosome:
         machine, duration = jobs[job_id][task_id]
         earliest_start_time = job_completion_time[job_id]
         start_time = max(machine_time[machine], earliest_start_time)
+
         end_time = start_time + duration
         machine_time[machine] = end_time
         job_completion_time[job_id] = end_time
@@ -40,9 +43,12 @@ def calculate_makespan(chromosome, jobs):
             'end': end_time,
             'name': f'job({job_id}, {task_id})'
         })
-
+        
     makespan = max(machine_time)
     return makespan, task_schedule
+
+def order_chromosome(chromosome):
+    return sorted(chromosome, key=lambda x: (x[1]))
 
 # Plot the evolution of the best makespan and the final schedule
 def plot_results(evolution, schedule):
