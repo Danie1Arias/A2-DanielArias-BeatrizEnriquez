@@ -44,7 +44,7 @@ data3 = [
 ]
 
 ga = GeneticAlgorithm(data1, population_size=15, generations=50, mutation_rate=0.5, elitism=0.1, 
-                      selection_scheme='tournament', crossover_scheme='one_point', mutation_scheme='multi_mutation')
+                      selection_scheme='tournament', crossover_scheme='uniform', mutation_scheme='multi_mutation')
 best_solution, best_makespan, evolution, schedule = ga.run()
 
 print("Best Makespan:", best_makespan)

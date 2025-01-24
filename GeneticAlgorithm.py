@@ -42,13 +42,17 @@ class GeneticAlgorithm:
     
     def uniform_crossover(self, parent1, parent2):
         size = len(parent1)
-        child = [None] * size
+        child1 = [None] * size
+        child2 = [None] * size
+
         for i in range(size):
             if random.random() < 0.5:
-                child[i] = parent1[i]
+                child1[i] = parent1[i]
+                child2[i] = parent2[i]
             else:
-                child[i] = parent2[i]
-        return child
+                child2[i] = parent2[i]
+                child1[i] = parent1[i]
+        return order_chromosome(child1), order_chromosome(child2)
     
     def crossover(self, parent1, parent2):
         if self.crossover_scheme == 'order':
