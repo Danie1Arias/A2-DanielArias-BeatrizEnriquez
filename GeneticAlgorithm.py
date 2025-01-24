@@ -36,8 +36,29 @@ class GeneticAlgorithm:
     
     def two_point_crossover(self, parent1, parent2):
         size = len(parent1)
-        point1, point2 = sorted(random.sample(range(size), 2))
-        child = parent1[:point1] + parent2[point1:point2] + parent1[point2:]
+        point1, point2 = random.sample(range(size), 2)
+        # Create initial children with segments copied from parent1
+        child1 = [None] * size
+        child2 = [None] * size
+
+        # Copy the segment between point1 and point2 from parent1
+        child1[point1:point2] = parent1[point1:point2]
+        child2[point1:point2] = parent2[point1:point2]
+
+        child1 = self.fill_remaining(child1, parent2, point1, point2)
+        child2 = self.fill_remaining(child2, parent1, point1, point2)
+       
+        return order_chromosome(child1), order_chromosome(child2)
+    
+    def fill_remaining(self, child, donor_parent, start, end):
+        size = len(donor_parent)
+        used_genes = set(child[start:end])  # Genes already in the child segment
+        unused_genes = [gene for gene in donor_parent if gene not in used_genes]
+
+        # Fill empty slots in the child
+        for i in range(size):
+            if child[i] is None:
+                child[i] = unused_genes.pop(0)
         return child
     
     def uniform_crossover(self, parent1, parent2):
