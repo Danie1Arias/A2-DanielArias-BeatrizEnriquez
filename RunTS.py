@@ -1,4 +1,4 @@
-from GeneticAlgorithm import GeneticAlgorithm
+from TabuSearchAlgorithm import TabuSearch
 from Utils import plot_results
 
 data1 = [
@@ -43,9 +43,8 @@ data3 = [
     [14, 37, 10, 28, 13, 13, 0, 28, 2, 18, 1, 43, 16, 46, 8, 39, 3, 30, 12, 15, 11, 38, 17, 38, 18, 45, 19, 44, 9, 16, 15, 29, 5, 33, 6, 20, 7, 35, 4, 34]
 ]
 
-ga = GeneticAlgorithm(data3, population_size=100, generations=1000, mutation_rate=0.5, elitism=0.1, 
-                      selection_scheme='tournament', crossover_scheme='uniform', mutation_scheme='multi_mutation')
-best_solution, best_makespan, evolution, schedule = ga.run()
+tabu_search = TabuSearch(data2, max_iterations=1000, tabu_tenure=15, aspiration_criteria=True)   
+best_solution, best_makespan, evolution, schedule = tabu_search.run()
 
 print("Best Makespan:", best_makespan)
 plot_results(evolution, schedule)

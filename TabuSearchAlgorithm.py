@@ -1,5 +1,5 @@
 import random
-from Utils import parse_data, generate_initial_solution, calculate_makespan
+from Utils import parse_data, generate_initial_solution, calculate_makespan, order_chromosome
 
 class TabuSearch:
     def __init__(self, data, max_iterations=1000, tabu_tenure=10, aspiration_criteria=True):
@@ -23,7 +23,7 @@ class TabuSearch:
         
         # Convert list back to tuple for immutability and hashing
         new_solution_tuple = tuple(new_solution)
-        return new_solution_tuple
+        return order_chromosome(new_solution_tuple)
 
     # Check if a move is in the tabu list
     def is_tabu(self, move):
